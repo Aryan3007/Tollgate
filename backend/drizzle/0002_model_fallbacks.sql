@@ -1,0 +1,1 @@
+ALTER TABLE "models" ADD COLUMN "fallback_aliases" text[] DEFAULT '{}' NOT NULL;

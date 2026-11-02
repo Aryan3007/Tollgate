@@ -1,0 +1,1 @@
+ALTER TABLE "teams" ADD COLUMN "pii_entities" text[] DEFAULT '{"aadhaar","pan","phone","card","email"}' NOT NULL;

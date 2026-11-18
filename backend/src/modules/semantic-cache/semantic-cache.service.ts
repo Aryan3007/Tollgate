@@ -1,8 +1,6 @@
-import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import { createLogger } from '../../common/logger.js';
 import type { Redis } from 'ioredis';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
-import { REDIS } from '../../infra/redis/redis.module.js';
 import type { ChatCompletionRequest } from '../completions/dto/chat-completion-request.schema.js';
 import type { KeyContext } from '../keys/key-context.js';
 import type { Usage } from '../providers/types.js';
@@ -34,17 +32,16 @@ export interface CacheHit {
  * Every failure here (Redis down, model still loading, slow embedding) is a
  * cache miss, never an error: the cache can only ever save money.
  */
-@Injectable()
-export class SemanticCacheService implements OnModuleInit {
-  private readonly logger = new Logger(SemanticCacheService.name);
+export class SemanticCacheService {
+  private readonly logger = createLogger(SemanticCacheService.name);
 
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
-    @Inject(REDIS) private readonly redis: Redis,
+    private readonly env: Env,
+    private readonly redis: Redis,
     private readonly embedder: Embedder,
   ) {}
 
-  async onModuleInit(): Promise<void> {
+  async start(): Promise<void> {
     await this.ensureIndex().catch((err: unknown) =>
       this.logger.warn({ err }, 'Could not create the vector index; semantic matching is off'),
     );

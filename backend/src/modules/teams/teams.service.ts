@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import {
   ConflictError,
   NotFoundError,
@@ -28,7 +27,6 @@ export type TeamWithSpend = Team & {
 const duplicateName = () =>
   new ConflictError('team_name_taken', 'A team with this name already exists', 'name');
 
-@Injectable()
 export class TeamsService {
   constructor(
     private readonly teams: TeamsRepository,

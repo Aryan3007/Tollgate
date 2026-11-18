@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { createLogger } from '../../common/logger.js';
 import type { Redis } from 'ioredis';
 import {
   GatewayError,
@@ -6,7 +6,6 @@ import {
   ServiceUnavailableError,
 } from '../../common/errors/gateway-error.js';
 import { scripts } from '../../infra/redis/lua-script.js';
-import { REDIS } from '../../infra/redis/redis.module.js';
 import type { KeyContext } from '../keys/key-context.js';
 
 const MINUTE_MS = 60_000;
@@ -23,11 +22,10 @@ interface Bucket {
  * checked in one atomic Lua call. Like budgets, this fails closed when Redis
  * is unreachable.
  */
-@Injectable()
 export class RateLimitService {
-  private readonly logger = new Logger(RateLimitService.name);
+  private readonly logger = createLogger(RateLimitService.name);
 
-  constructor(@Inject(REDIS) private readonly redis: Redis) {}
+  constructor(private readonly redis: Redis) {}
 
   async consume(key: KeyContext, tokens: number): Promise<void> {
     const buckets: Bucket[] = [

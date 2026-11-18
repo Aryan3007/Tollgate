@@ -1,14 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
 import { ProviderNotConfiguredError } from '../../common/errors/gateway-error.js';
 import { SecretStore, type ProviderSecretName } from './secret-store.js';
 
-@Injectable()
 export class EnvSecretStore extends SecretStore {
   private readonly keys: Record<ProviderSecretName, string | undefined>;
 
-  constructor(@Inject(APP_CONFIG) env: Env) {
+  constructor(env: Env) {
     super();
     this.keys = {
       openai: env.PROVIDER_KEY_OPENAI,

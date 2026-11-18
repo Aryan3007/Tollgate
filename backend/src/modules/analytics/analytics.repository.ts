@@ -1,6 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq, gte, lt, sql, sum } from 'drizzle-orm';
-import { DB, type Database } from '../../db/database.module.js';
+import type { Database } from '../../db/client.js';
 import { requestLogs, teams } from '../../db/schema/index.js';
 
 export interface SpendTotals {
@@ -42,9 +41,8 @@ const cost = sql<number>`coalesce(sum(${requestLogs.costMicroInr}), 0)`.mapWith(
 // Drizzle has no builder for date_trunc; bucket by UTC day to match budget months.
 const utcDay = sql<string>`to_char(date_trunc('day', ${requestLogs.createdAt} at time zone 'UTC'), 'YYYY-MM-DD')`;
 
-@Injectable()
 export class AnalyticsRepository {
-  constructor(@Inject(DB) private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   async totals(from: Date, to: Date): Promise<SpendTotals> {
     const [row] = await this.db

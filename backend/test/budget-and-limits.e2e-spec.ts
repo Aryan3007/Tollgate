@@ -2,8 +2,6 @@ import { eq } from 'drizzle-orm';
 import OpenAI from 'openai';
 import { monthOf } from '../src/common/month.js';
 import { requestLogs, teams } from '../src/db/schema/index.js';
-import { BudgetService } from '../src/modules/budget/budget.service.js';
-import { RequestLogWriter } from '../src/modules/request-logs/request-log.writer.js';
 import {
   createKey,
   createTeam,
@@ -43,7 +41,7 @@ describe('Budgets and rate limits (e2e)', () => {
     teamId = (await createTeam(t, adminToken)).id;
   });
 
-  const budget = () => t.app.get(BudgetService);
+  const budget = () => t.container.budget;
   const setBudget = (micro: number) =>
     t.db.update(teams).set({ monthlyBudgetMicroInr: micro }).where(eq(teams.id, teamId));
   const call = (secret: string, body: object = {}) =>
@@ -115,7 +113,7 @@ describe('Budgets and rate limits (e2e)', () => {
         expect(snapshot?.reserved).toBe(0);
         expect(snapshot?.spent).toBeGreaterThan(0);
       });
-      await t.app.get(RequestLogWriter).drain();
+      await t.container.requestLogWriter.drain();
       const [row] = await t.db.select().from(requestLogs);
       expect(row).toMatchObject({ statusCode: 499, errorCode: 'client_closed', streamed: true });
     });

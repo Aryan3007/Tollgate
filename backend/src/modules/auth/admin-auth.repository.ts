@@ -1,6 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
-import { DB, type Database } from '../../db/database.module.js';
+import type { Database } from '../../db/client.js';
 import {
   admins,
   refreshTokens,
@@ -13,9 +12,8 @@ export type RotationResult =
   | { outcome: 'invalid' }
   | { outcome: 'reused' };
 
-@Injectable()
 export class AdminAuthRepository {
-  constructor(@Inject(DB) private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   async findAdminByEmail(email: string): Promise<Admin | null> {
     const [admin] = await this.db

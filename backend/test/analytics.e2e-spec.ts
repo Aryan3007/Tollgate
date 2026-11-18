@@ -1,6 +1,5 @@
 import { monthOf } from '../src/common/month.js';
 import { requestLogs } from '../src/db/schema/index.js';
-import { RequestLogWriter } from '../src/modules/request-logs/request-log.writer.js';
 import { createKey, createTeam, createTestApp, loginAsAdmin, resetState, type TestApp } from './support/app.js';
 
 describe('Admin: /v1/admin/analytics/spend (e2e)', () => {
@@ -32,7 +31,7 @@ describe('Admin: /v1/admin/analytics/spend (e2e)', () => {
         body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'Hi' }] }),
       });
     }
-    await t.app.get(RequestLogWriter).drain();
+    await t.container.requestLogWriter.drain();
 
     const res = await spend().expect(200);
 

@@ -11,7 +11,7 @@ const client = new OpenAI({
 });
 ```
 
-Built with NestJS, Redis (Lua scripts and vector search), Postgres, BullMQ and Next.js.
+Built with Express 5 and TypeScript, Redis (Lua scripts and vector search), Postgres, BullMQ and Next.js.
 
 ## Why it exists
 
@@ -42,7 +42,7 @@ Teams that call LLM APIs directly end up with provider keys scattered across ser
 ## Architecture
 
 ```
- app (OpenAI SDK) ── POST /v1/chat/completions ──▶ Tollgate gateway (NestJS)
+ app (OpenAI SDK) ── POST /v1/chat/completions ──▶ Tollgate gateway (Express)
                                                       │
    1. authenticate virtual key ........ Redis cache ─▶ Postgres
    2. model access + rate limit ....... Redis (Lua, GCRA)
@@ -72,7 +72,7 @@ cd backend
 pnpm install
 cp .env.example .env            # fill in the values marked below
 pnpm build && pnpm db:migrate && pnpm db:seed
-pnpm start
+pnpm start                      # or `pnpm start:dev` to run from TypeScript with auto-reload
 
 # 3. Dashboard (http://localhost:3000), in another terminal
 cd frontend
@@ -159,7 +159,7 @@ Run it twice. The response carries two extra headers:
 
 ## API
 
-Interactive docs: <http://localhost:4000/api/docs> (raw spec at `/api/docs-json`). Swagger UI is off in production unless `SWAGGER_UI_ENABLED=true`.
+Interactive docs: <http://localhost:4000/api/docs> (raw spec at `/api/docs-json`). Swagger UI is off in production unless `SWAGGER_UI_ENABLED=true`. The spec is generated at startup from the `@openapi` JSDoc blocks in each module's `*.routes.ts`, with shared schemas in `src/docs/schemas.ts`.
 
 | Endpoint | Auth | Purpose |
 |---|---|---|
@@ -190,10 +190,14 @@ Errors use OpenAI's shape (`{"error": {"message", "type", "code", "param"}}`) on
 ## Project layout
 
 ```
-backend/                NestJS service
-  src/modules/
+backend/                Express 5 service
+  src/main.ts           entry point: loads config, starts the server, handles graceful shutdown
+  src/app.ts            middleware (logging, security headers, CORS, rate limit, body parsing) and route mounting
+  src/container.ts      composition root: creates and wires every service (plain constructors, no DI framework)
+  src/docs/             OpenAPI definition and shared schemas
+  src/modules/          each module: routes (+ OpenAPI docs) → controller → service → repository
     completions/        the request pipeline, SSE writer, per-request stats
-    auth/               admin JWT + refresh rotation, virtual-key guard
+    auth/               admin JWT + refresh rotation, admin and virtual-key middleware
     keys/ teams/        admin CRUD, key lookup cache
     budget/             reserve / settle / release / sweep
     rate-limit/         GCRA limits
@@ -208,7 +212,6 @@ backend/                NestJS service
   test/                 integration tests (real Postgres and Redis), mock providers, load scripts
 frontend/               Next.js dashboard (App Router, Tailwind, TanStack Query, Zustand)
 docker-compose.yml      Postgres 17 and Redis 8 for development
-PLAN.md                 design decisions and the build plan
 ```
 
 ## Configuration
@@ -233,8 +236,8 @@ Per-team settings (budget, rate limits, default max tokens, PII types, cache on/
 
 ```bash
 cd backend
-pnpm test        # 109 unit tests
-pnpm test:e2e    # 166 integration tests; starts real Postgres and Redis with Testcontainers (needs Docker)
+pnpm test        # 116 unit tests
+pnpm test:e2e    # 178 integration tests; starts real Postgres and Redis with Testcontainers (needs Docker)
 pnpm lint
 ```
 
@@ -248,6 +251,4 @@ The integration tests drive the real app over HTTP with the OpenAI SDK against m
 - **One admin role and one organization.** Multi-tenant orgs, user roles, budget alerts and an embeddings endpoint are out of scope for now.
 - Each gateway instance keeps its own circuit breaker in memory; they don't share state.
 - The Playground keeps the virtual key in your browser tab's session storage and sends it only to the gateway.
-
-See [`PLAN.md`](PLAN.md) for the design decisions behind these choices.
 # Tollgate

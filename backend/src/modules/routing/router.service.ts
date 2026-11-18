@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import type { ChatCompletionRequest } from '../completions/dto/chat-completion-request.schema.js';
 import type { KeyContext } from '../keys/key-context.js';
 import {
@@ -15,7 +14,6 @@ function canServe(model: CatalogModel, req: ChatCompletionRequest): boolean {
   return true;
 }
 
-@Injectable()
 export class RouterService {
   constructor(private readonly catalog: ModelCatalogService) {}
 

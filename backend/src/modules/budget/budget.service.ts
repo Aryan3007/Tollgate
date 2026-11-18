@@ -1,14 +1,12 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { createLogger } from '../../common/logger.js';
 import type { Redis } from 'ioredis';
 import {
   GatewayError,
   ServiceUnavailableError,
 } from '../../common/errors/gateway-error.js';
 import { monthOf, monthStart } from '../../common/month.js';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
 import { scripts } from '../../infra/redis/lua-script.js';
-import { REDIS } from '../../infra/redis/redis.module.js';
 import { RequestLogsRepository } from '../request-logs/request-logs.repository.js';
 
 const LEDGER_TTL_SECONDS = 40 * 86_400;
@@ -45,13 +43,12 @@ const reservationsKey = (teamId: string, month: string) => `bud:resv:{${teamId}}
  * Redis failures fail closed: without the ledger the gateway cannot promise
  * a team stays within budget, so it refuses the request.
  */
-@Injectable()
 export class BudgetService {
-  private readonly logger = new Logger(BudgetService.name);
+  private readonly logger = createLogger(BudgetService.name);
 
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
-    @Inject(REDIS) private readonly redis: Redis,
+    private readonly env: Env,
+    private readonly redis: Redis,
     private readonly logs: RequestLogsRepository,
   ) {}
 

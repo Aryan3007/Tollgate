@@ -1,12 +1,5 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  type OnApplicationShutdown,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { createLogger } from '../../common/logger.js';
 import { Queue, Worker } from 'bullmq';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
 import { producerConnection, workerConnection } from '../../infra/queue/bull-connection.js';
 import { BudgetService } from './budget.service.js';
@@ -18,18 +11,17 @@ const EVERY_MS = 30_000;
  * Runs the expired-reservation sweep every 30 s. A BullMQ job scheduler (not
  * setInterval) so only one instance runs each sweep, however many are up.
  */
-@Injectable()
-export class BudgetSweeper implements OnModuleInit, OnApplicationShutdown {
-  private readonly logger = new Logger(BudgetSweeper.name);
+export class BudgetSweeper {
+  private readonly logger = createLogger(BudgetSweeper.name);
   private queue?: Queue;
   private worker?: Worker;
 
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
+    private readonly env: Env,
     private readonly budget: BudgetService,
   ) {}
 
-  async onModuleInit(): Promise<void> {
+  async start(): Promise<void> {
     if (!this.env.WORKER_ENABLED) return;
 
     this.queue = new Queue(QUEUE, { connection: producerConnection(this.env) });
@@ -49,7 +41,7 @@ export class BudgetSweeper implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  async stop(): Promise<void> {
     await this.worker?.close();
     await this.queue?.close();
   }

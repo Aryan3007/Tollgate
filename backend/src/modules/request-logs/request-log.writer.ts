@@ -1,12 +1,5 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  type OnApplicationShutdown,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { createLogger } from '../../common/logger.js';
 import { Queue, Worker } from 'bullmq';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
 import type { NewRequestLog } from '../../db/schema/index.js';
 import { producerConnection, workerConnection } from '../../infra/queue/bull-connection.js';
@@ -24,20 +17,19 @@ type QueuedRow = Omit<NewRequestLog, 'createdAt'> & { createdAt: string };
  *
  * Trade-off: a crash loses at most one flush interval of buffered rows.
  */
-@Injectable()
-export class RequestLogWriter implements OnModuleInit, OnApplicationShutdown {
-  private readonly logger = new Logger(RequestLogWriter.name);
+export class RequestLogWriter {
+  private readonly logger = createLogger(RequestLogWriter.name);
   private buffer: QueuedRow[] = [];
   private timer?: NodeJS.Timeout;
   private queue!: Queue<{ rows: QueuedRow[] }>;
   private worker?: Worker<{ rows: QueuedRow[] }>;
 
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
+    private readonly env: Env,
     private readonly repo: RequestLogsRepository,
   ) {}
 
-  onModuleInit(): void {
+  start(): void {
     this.queue = new Queue(QUEUE, {
       connection: producerConnection(this.env),
       defaultJobOptions: {
@@ -95,7 +87,7 @@ export class RequestLogWriter implements OnModuleInit, OnApplicationShutdown {
     this.logger.warn('Timed out waiting for request logs to drain');
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  async stop(): Promise<void> {
     clearInterval(this.timer);
     await this.flush();
     await this.worker?.close();

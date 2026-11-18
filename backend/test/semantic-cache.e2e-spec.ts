@@ -1,6 +1,4 @@
 import OpenAI from 'openai';
-import { BudgetService } from '../src/modules/budget/budget.service.js';
-import { RequestLogWriter } from '../src/modules/request-logs/request-log.writer.js';
 import { createKey, createTeam, createTestApp, loginAsAdmin, resetState, type TestApp } from './support/app.js';
 
 const QUESTION = 'What is your refund policy for damaged items?';
@@ -40,7 +38,7 @@ describe('Semantic cache (e2e)', () => {
   };
   const ask = (content: string, extra: object = {}, apiKey = secret) => call({ messages: [{ role: 'user', content }], ...extra }, apiKey);
   const logs = async () => {
-    await t.app.get(RequestLogWriter).drain();
+    await t.container.requestLogWriter.drain();
     const res = await t.http().get('/v1/admin/requests?sortOrder=asc&limit=50').auth(token, { type: 'bearer' }).expect(200);
     return res.body.data as Array<{ cacheStatus: string; costMicroInr: number; savedMicroInr: number; inputTokens: number }>;
   };
@@ -57,7 +55,7 @@ describe('Semantic cache (e2e)', () => {
     it('answers an identical request from the cache without calling the provider or spending budget', async () => {
       const first = await ask(QUESTION);
       await settled();
-      const spentAfterFirst = (await t.app.get(BudgetService).snapshot(teamId))?.spent;
+      const spentAfterFirst = (await t.container.budget.snapshot(teamId))?.spent;
 
       const second = await ask(QUESTION);
 
@@ -66,7 +64,7 @@ describe('Semantic cache (e2e)', () => {
       expect(second.json.choices[0].message.content).toBe(first.json.choices[0].message.content);
       expect(second.json.id).not.toBe(first.json.id);
       expect(t.mock.requests).toHaveLength(1);
-      expect((await t.app.get(BudgetService).snapshot(teamId))?.spent).toBe(spentAfterFirst);
+      expect((await t.container.budget.snapshot(teamId))?.spent).toBe(spentAfterFirst);
     });
 
     it('answers a near-identical question from the semantic layer', async () => {

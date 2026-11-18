@@ -1,11 +1,9 @@
-import { Injectable } from '@nestjs/common';
 import type { Paginated } from '../../common/pagination.js';
-import type { ListModelsQuery } from './dto/model.dto.js';
+import type { ListModelsQuery } from './dto/model.schemas.js';
 import { ModelCatalogService, type CatalogModel } from './model-catalog.service.js';
 
 export type ModelView = Omit<CatalogModel, 'baseUrl' | 'createdAt' | 'fallbackAliases'>;
 
-@Injectable()
 export class ModelsService {
   constructor(private readonly catalog: ModelCatalogService) {}
 

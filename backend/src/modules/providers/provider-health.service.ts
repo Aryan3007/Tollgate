@@ -1,6 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { count, gte, isNotNull, sql, and } from 'drizzle-orm';
-import { DB, type Database } from '../../db/database.module.js';
+import type { Database } from '../../db/client.js';
 import { providers, requestLogs } from '../../db/schema/index.js';
 import { SecretStore } from '../../infra/keyvault/secret-store.js';
 import { BreakerRegistry } from './circuit-breaker/breaker-registry.js';
@@ -18,10 +17,9 @@ export interface ProviderHealth {
 
 const WINDOW_MINUTES = 15;
 
-@Injectable()
 export class ProviderHealthService {
   constructor(
-    @Inject(DB) private readonly db: Database,
+    private readonly db: Database,
     private readonly secrets: SecretStore,
     private readonly breakers: BreakerRegistry,
   ) {}

@@ -1,20 +1,16 @@
+import { once } from 'node:events';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test } from '@nestjs/testing';
 import argon2 from 'argon2';
 import { sql } from 'drizzle-orm';
 import type { Redis } from 'ioredis';
 import request from 'supertest';
 import { inject } from 'vitest';
-import { AppModule } from '../../src/app.module.js';
-import { configureApp } from '../../src/app.setup.js';
-import { DB, type Database } from '../../src/db/database.module.js';
+import { createApp } from '../../src/app.js';
+import { loadEnv } from '../../src/config/env.schema.js';
+import { createContainer, type Container } from '../../src/container.js';
+import type { Database } from '../../src/db/client.js';
 import { admins, models, providers } from '../../src/db/schema/index.js';
-import { REDIS } from '../../src/infra/redis/redis.module.js';
-import { BreakerRegistry } from '../../src/modules/providers/circuit-breaker/breaker-registry.js';
-import { ModelCatalogService } from '../../src/modules/providers/model-catalog.service.js';
-import { RequestLogWriter } from '../../src/modules/request-logs/request-log.writer.js';
-import { Embedder } from '../../src/modules/semantic-cache/embedder.js';
 import { HashEmbedder } from './hash-embedder.js';
 import { startMockProvider, type MockProvider } from '../mock-provider/server.js';
 
@@ -26,7 +22,8 @@ export const TTFB_TIMEOUT_MS = 300;
 export const USD_INR_RATE = 100;
 
 export interface TestApp {
-  app: NestExpressApplication;
+  /** The running app's services, for tests that need to wait on or inspect them. */
+  container: Container;
   baseURL: string;
   db: Database;
   redis: Redis;
@@ -38,7 +35,8 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-export async function createTestApp(): Promise<TestApp> {
+/** `envOverrides` changes config for this app only (e.g. a tight rate limit). */
+export async function createTestApp(envOverrides: Record<string, string> = {}): Promise<TestApp> {
   const mock = await startMockProvider();
   const backup = await startMockProvider();
   Object.assign(process.env, {
@@ -60,26 +58,25 @@ export async function createTestApp(): Promise<TestApp> {
   });
 
   const embedder = new HashEmbedder();
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(Embedder)
-    .useValue(embedder)
-    .compile();
-  const app = moduleRef.createNestApplication<NestExpressApplication>({ bufferLogs: true });
-  configureApp(app);
-  await app.listen(0, '127.0.0.1');
-  const { port } = app.getHttpServer().address() as AddressInfo;
+  const container = await createContainer(loadEnv({ ...process.env, ...envOverrides }), { embedder });
+  await container.start();
+  const server: Server = createApp(container).listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const { port } = server.address() as AddressInfo;
 
   return {
-    app,
+    container,
     baseURL: `http://127.0.0.1:${port}`,
-    db: app.get<Database>(DB),
-    redis: app.get<Redis>(REDIS),
+    db: container.db,
+    redis: container.redis,
     mock,
     backup,
     embedder,
-    http: () => request(app.getHttpServer()),
+    http: () => request(server),
     close: async () => {
-      await app.close();
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await container.stop();
       await mock.close();
       await backup.close();
     },
@@ -89,12 +86,12 @@ export async function createTestApp(): Promise<TestApp> {
 /** Empties every table and Redis, then seeds one admin and a catalog pointing at the mock provider. */
 export async function resetState(t: TestApp): Promise<void> {
   // Let in-flight log batches land first so they cannot leak into the next test.
-  await t.app.get(RequestLogWriter).drain();
+  await t.container.requestLogWriter.drain();
   await t.db.execute(
     sql`truncate request_logs, refresh_tokens, admins, virtual_keys, teams, models, providers restart identity cascade`,
   );
   await deleteKeys(t.redis, ['vk:*', 'rl:*', 'bud:*', 'cb:*', 'ce:*', 'sc:*']);
-  t.app.get(BreakerRegistry).reset();
+  t.container.breakers.reset();
   t.embedder.calls.length = 0;
 
   await t.db.insert(admins).values({
@@ -118,7 +115,7 @@ export async function resetState(t: TestApp): Promise<void> {
     { alias: 'claude-haiku-4-5', providerId: anthropic.id, upstreamName: 'claude-haiku-4-5', inputUsdPerMtok: 1, outputUsdPerMtok: 5 },
     { alias: 'llama-3.3-70b', providerId: groq.id, upstreamName: 'llama-3.3-70b-versatile', inputUsdPerMtok: 0.59, outputUsdPerMtok: 0.79 },
   ]);
-  t.app.get(ModelCatalogService).invalidate();
+  t.container.catalog.invalidate();
 
   for (const mock of [t.mock, t.backup]) {
     mock.behavior = {

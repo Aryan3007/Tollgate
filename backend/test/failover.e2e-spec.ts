@@ -1,7 +1,4 @@
 import OpenAI from 'openai';
-import { RequestLogWriter } from '../src/modules/request-logs/request-log.writer.js';
-import { BudgetService } from '../src/modules/budget/budget.service.js';
-import { BreakerRegistry } from '../src/modules/providers/circuit-breaker/breaker-registry.js';
 import {
   createKey,
   createTeam,
@@ -37,7 +34,7 @@ describe('Routing and failover (e2e)', () => {
   });
 
   const latestLog = async () => {
-    await t.app.get(RequestLogWriter).drain();
+    await t.container.requestLogWriter.drain();
     const res = await t.http().get('/v1/admin/requests?limit=1').auth(token, { type: 'bearer' }).expect(200);
     return res.body.data[0];
   };
@@ -155,11 +152,11 @@ describe('Routing and failover (e2e)', () => {
       const pending = client.chat.completions.create({ model: 'gpt-4o-mini', messages, max_tokens: 100 });
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      const during = await t.app.get(BudgetService).snapshot(teamId);
+      const during = await t.container.budget.snapshot(teamId);
       await pending;
 
       expect(during?.reserved).toBe(Math.ceil((5 * 1 + 100 * 5) * 100));
-      expect(await t.app.get(BudgetService).snapshot(teamId)).toMatchObject({ reserved: 0 });
+      expect(await t.container.budget.snapshot(teamId)).toMatchObject({ reserved: 0 });
     });
   });
 
@@ -174,14 +171,14 @@ describe('Routing and failover (e2e)', () => {
 
       expect(t.mock.requests).toHaveLength(5);
       expect(t.backup.requests).toHaveLength(8);
-      expect(t.app.get(BreakerRegistry).for('openai').current).toBe('open');
+      expect(t.container.breakers.for('openai').current).toBe('open');
       expect(await latestLog()).toMatchObject({ provider: 'groq', failoverCount: 0 });
     });
 
     it('reports breaker state on the provider health endpoint', async () => {
       t.mock.behavior.failStatus = 500;
       for (let i = 0; i < 5; i++) await client.chat.completions.create({ model: 'gpt-4o-mini', messages });
-      await t.app.get(RequestLogWriter).drain();
+      await t.container.requestLogWriter.drain();
 
       const res = await t.http().get('/v1/admin/providers').auth(token, { type: 'bearer' }).expect(200);
 

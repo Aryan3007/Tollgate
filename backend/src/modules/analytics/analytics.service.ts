@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import { monthOf, monthStart } from '../../common/month.js';
 import {
   AnalyticsRepository,
@@ -22,7 +21,6 @@ export interface SpendReport {
 
 const DAY_MS = 86_400_000;
 
-@Injectable()
 export class AnalyticsService {
   constructor(private readonly repo: AnalyticsRepository) {}
 

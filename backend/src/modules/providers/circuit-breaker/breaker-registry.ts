@@ -1,6 +1,5 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { createLogger } from '../../../common/logger.js';
 import type { Redis } from 'ioredis';
-import { REDIS } from '../../../infra/redis/redis.module.js';
 import type { ProviderKind } from '../types.js';
 import { CircuitBreaker, type BreakerState } from './circuit-breaker.js';
 
@@ -11,12 +10,11 @@ const redisKey = (kind: ProviderKind) => `cb:${kind}`;
  * itself with no coordination on the hot path. State changes are mirrored to
  * Redis only so the dashboard can show them.
  */
-@Injectable()
 export class BreakerRegistry {
-  private readonly logger = new Logger(BreakerRegistry.name);
+  private readonly logger = createLogger(BreakerRegistry.name);
   private readonly breakers = new Map<ProviderKind, CircuitBreaker>();
 
-  constructor(@Inject(REDIS) private readonly redis: Redis) {}
+  constructor(private readonly redis: Redis) {}
 
   for(kind: ProviderKind): CircuitBreaker {
     let breaker = this.breakers.get(kind);

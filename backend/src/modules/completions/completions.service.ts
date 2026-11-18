@@ -1,5 +1,5 @@
+import { createLogger } from '../../common/logger.js';
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   AllProvidersFailedError,
   ForbiddenError,
@@ -8,7 +8,6 @@ import {
   ProviderNotConfiguredError,
   ServiceUnavailableError,
 } from '../../common/errors/gateway-error.js';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
 import { BudgetService, type Reservation } from '../budget/budget.service.js';
 import {
@@ -104,12 +103,11 @@ interface Outcome {
  * → provider call with failover → settle → log. Every exit path settles or releases the
  * reservation and writes exactly one log row.
  */
-@Injectable()
 export class CompletionsService {
-  private readonly logger = new Logger(CompletionsService.name);
+  private readonly logger = createLogger(CompletionsService.name);
 
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
+    private readonly env: Env,
     private readonly catalog: ModelCatalogService,
     private readonly providers: ProviderRegistry,
     private readonly router: RouterService,
@@ -512,7 +510,7 @@ export class CompletionsService {
       cacheStatus: outcome.cacheStatus ?? 'skipped',
       savedMicroInr: outcome.savedMicroInr ?? 0,
     });
-    this.logger.log(
+    this.logger.info(
       {
         requestId: call.requestId,
         model: call.body.model,

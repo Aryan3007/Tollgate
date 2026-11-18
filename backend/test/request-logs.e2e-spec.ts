@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { RequestLogWriter } from '../src/modules/request-logs/request-log.writer.js';
 import {
   createKey,
   createTeam,
@@ -36,7 +35,7 @@ describe('Request logs and usage (e2e)', () => {
       headers: { 'content-type': 'application/json', authorization: `Bearer ${key.secret}` },
       body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Hi' }] }),
     });
-  const drain = () => t.app.get(RequestLogWriter).drain();
+  const drain = () => t.container.requestLogWriter.drain();
   const admin = (path: string) => t.http().get(path).auth(token, { type: 'bearer' });
 
   it('logs one row per request with tokens, cost and the request id', async () => {

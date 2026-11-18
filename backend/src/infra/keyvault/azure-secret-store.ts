@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import type { SecretClient } from '@azure/keyvault-secrets';
 import { ProviderNotConfiguredError } from '../../common/errors/gateway-error.js';
 import { SecretStore, type ProviderSecretName } from './secret-store.js';
@@ -13,7 +12,6 @@ export const secretNameFor = (name: ProviderSecretName) => `provider-${name}`;
  * minutes so the hot path never waits on Azure; rotating a key in the vault
  * takes effect within the TTL.
  */
-@Injectable()
 export class AzureSecretStore extends SecretStore {
   private readonly cache = new Map<
     ProviderSecretName,

@@ -1,8 +1,6 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { createLogger } from '../../common/logger.js';
 import type { Redis } from 'ioredis';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
-import { REDIS } from '../../infra/redis/redis.module.js';
 import type { KeyContext } from './key-context.js';
 import { hashKeySecret, looksLikeKeySecret } from './key-secret.js';
 import { KeysRepository } from './keys.repository.js';
@@ -23,13 +21,12 @@ const cacheKey = (hash: string) => `vk:v4:${hash}`;
  * takes effect everywhere at once. If Redis is down, lookups fall back to
  * Postgres (fail open for auth).
  */
-@Injectable()
 export class KeyContextService {
-  private readonly logger = new Logger(KeyContextService.name);
+  private readonly logger = createLogger(KeyContextService.name);
 
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
-    @Inject(REDIS) private readonly redis: Redis,
+    private readonly env: Env,
+    private readonly redis: Redis,
     private readonly keys: KeysRepository,
   ) {}
 

@@ -1,5 +1,3 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { APP_CONFIG } from '../../../config/config.module.js';
 import type { Env } from '../../../config/env.schema.js';
 import { SecretStore } from '../../../infra/keyvault/secret-store.js';
 import type { ChatCompletionRequest } from '../../completions/dto/chat-completion-request.schema.js';
@@ -14,12 +12,11 @@ import type {
 } from '../types.js';
 import { UpstreamError } from '../upstream-error.js';
 
-@Injectable()
 export class OpenAIAdapter implements ProviderAdapter {
   readonly kind: ProviderKind = 'openai';
 
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
+    private readonly env: Env,
     private readonly secrets: SecretStore,
   ) {}
 

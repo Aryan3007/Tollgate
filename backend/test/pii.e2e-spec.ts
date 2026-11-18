@@ -2,7 +2,6 @@ import OpenAI from 'openai';
 import { eq } from 'drizzle-orm';
 import { requestLogs, teams } from '../src/db/schema/index.js';
 import { verhoeffCheckDigit } from '../src/modules/pii/detectors/checksums.js';
-import { RequestLogWriter } from '../src/modules/request-logs/request-log.writer.js';
 import { createKey, createTeam, createTestApp, loginAsAdmin, resetState, type TestApp } from './support/app.js';
 
 const AADHAAR = `23456789012${verhoeffCheckDigit('23456789012')}`;
@@ -82,7 +81,7 @@ describe('PII masking (e2e)', () => {
 
   it('logs how many values were masked, and never the values themselves', async () => {
     await client.chat.completions.create({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: PROMPT }] });
-    await t.app.get(RequestLogWriter).drain();
+    await t.container.requestLogWriter.drain();
 
     const [row] = await t.db.select().from(requestLogs);
 
@@ -94,7 +93,7 @@ describe('PII masking (e2e)', () => {
     await client.chat.completions.create({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'hello there' }] });
 
     expect(upstreamSaw()).toContain('hello there');
-    await t.app.get(RequestLogWriter).drain();
+    await t.container.requestLogWriter.drain();
     expect((await t.db.select().from(requestLogs))[0]?.redactionCount).toBe(0);
   });
 

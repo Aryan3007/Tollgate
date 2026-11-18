@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import { RequestLogWriter } from '../src/modules/request-logs/request-log.writer.js';
 import type { CallStats } from '../src/modules/completions/call-stats.js';
 import { createKey, createTeam, createTestApp, loginAsAdmin, resetState, type TestApp } from './support/app.js';
 
@@ -135,7 +134,7 @@ describe('Per-request stats (e2e)', () => {
 
   it('matches what the request log records', async () => {
     const stats = statsOf(await call(QUESTION))!;
-    await t.app.get(RequestLogWriter).drain();
+    await t.container.requestLogWriter.drain();
 
     const [row] = (await t.http().get('/v1/admin/requests?limit=1').auth(token, { type: 'bearer' })).body.data;
 

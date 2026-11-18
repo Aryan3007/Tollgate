@@ -1,18 +1,10 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import argon2 from 'argon2';
 import { UnauthorizedError } from '../../common/errors/gateway-error.js';
 import type { AdminPrincipal } from '../../common/http/authenticated-request.js';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
 import { AdminAuthRepository } from './admin-auth.repository.js';
-
-export interface AccessTokenPayload {
-  sub: string;
-  email: string;
-  role: 'admin';
-}
+import { TokenService, type AccessTokenPayload } from './token.service.js';
 
 export interface Session {
   accessToken: string;
@@ -38,12 +30,11 @@ const invalidCredentials = () =>
 const invalidRefresh = () =>
   new UnauthorizedError('invalid_refresh_token', 'Session expired; sign in again');
 
-@Injectable()
 export class AdminAuthService {
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
+    private readonly env: Env,
     private readonly repo: AdminAuthRepository,
-    private readonly jwt: JwtService,
+    private readonly tokens: TokenService,
   ) {}
 
   async login(email: string, password: string): Promise<Session> {
@@ -93,7 +84,7 @@ export class AdminAuthService {
   ): Promise<Session> {
     const payload: AccessTokenPayload = { sub: admin.id, email: admin.email, role: 'admin' };
     return {
-      accessToken: await this.jwt.signAsync(payload),
+      accessToken: this.tokens.sign(payload),
       tokenType: 'Bearer',
       expiresIn: this.env.ACCESS_TOKEN_TTL_SECONDS,
       admin,

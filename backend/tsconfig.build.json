@@ -1,7 +1,12 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "incremental": false,
+    // swagger-jsdoc reads the OpenAPI JSDoc blocks from the compiled route
+    // files, so comments must survive compilation.
+    "removeComments": false,
+    "declaration": false
   },
   "include": ["src"],
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]

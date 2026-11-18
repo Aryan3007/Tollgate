@@ -1,7 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, desc, eq, getTableColumns, gte, inArray, lt, sql, sum } from 'drizzle-orm';
 import type { Paginated } from '../../common/pagination.js';
-import { DB, type Database } from '../../db/database.module.js';
+import type { Database } from '../../db/client.js';
 import { requestLogs, teams, virtualKeys, type NewRequestLog, type RequestLog } from '../../db/schema/index.js';
 import type { ListRequestsQuery } from './dto/request-log.schemas.js';
 
@@ -20,9 +19,8 @@ export type RequestLogView = RequestLog & {
   teamName: string | null;
 };
 
-@Injectable()
 export class RequestLogsRepository {
-  constructor(@Inject(DB) private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   async insertMany(rows: NewRequestLog[]): Promise<void> {
     if (rows.length > 0) await this.db.insert(requestLogs).values(rows);

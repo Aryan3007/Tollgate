@@ -1,4 +1,3 @@
-import { Inject, Injectable } from '@nestjs/common';
 import {
   and,
   asc,
@@ -14,7 +13,7 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import { likePattern, type Paginated } from '../../common/pagination.js';
-import { DB, type Database } from '../../db/database.module.js';
+import type { Database } from '../../db/client.js';
 import { teams, virtualKeys, type VirtualKey } from '../../db/schema/index.js';
 import type { KeyStatus, ListKeysQuery } from './dto/key.schemas.js';
 import type { PiiEntity } from '../pii/detectors/index.js';
@@ -95,9 +94,8 @@ const sortColumns = {
   lastUsedAt: virtualKeys.lastUsedAt,
 };
 
-@Injectable()
 export class KeysRepository {
-  constructor(@Inject(DB) private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   async insert(key: NewKey): Promise<KeyView> {
     const [created] = await this.db

@@ -1,4 +1,4 @@
-import type { Logger } from '@nestjs/common';
+import type { Logger } from '../../common/logger.js';
 import type { Response } from 'express';
 import { GatewayError } from '../../common/errors/gateway-error.js';
 

@@ -1,6 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
-import { DB, type Database } from '../../db/database.module.js';
+import type { Database } from '../../db/client.js';
 import { models, providers } from '../../db/schema/index.js';
 import type { ProviderKind } from './types.js';
 
@@ -23,12 +22,11 @@ const CACHE_TTL_MS = 30_000;
  * The model table is small and read on every request, so it is cached in
  * memory per instance. Admin edits show up within the TTL.
  */
-@Injectable()
 export class ModelCatalogService {
   private cache: { at: number; byAlias: Map<string, CatalogModel> } | null =
     null;
 
-  constructor(@Inject(DB) private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   async get(alias: string): Promise<CatalogModel | undefined> {
     return (await this.load()).get(alias);

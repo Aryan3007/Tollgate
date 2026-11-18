@@ -1,11 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
 import {
   ConflictError,
   NotFoundError,
   UnprocessableError,
 } from '../../common/errors/gateway-error.js';
 import type { Paginated } from '../../common/pagination.js';
-import { APP_CONFIG } from '../../config/config.module.js';
 import type { Env } from '../../config/env.schema.js';
 import { monthOf, monthStart } from '../../common/month.js';
 import {
@@ -39,10 +37,9 @@ export interface CreatedKey {
   secret: string;
 }
 
-@Injectable()
 export class KeysService {
   constructor(
-    @Inject(APP_CONFIG) private readonly env: Env,
+    private readonly env: Env,
     private readonly keys: KeysRepository,
     private readonly teams: TeamsRepository,
     private readonly catalog: ModelCatalogService,

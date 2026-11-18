@@ -1,7 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { asc, count, desc, eq, ilike } from 'drizzle-orm';
 import { likePattern, type Paginated } from '../../common/pagination.js';
-import { DB, type Database } from '../../db/database.module.js';
+import type { Database } from '../../db/client.js';
 import { teams, type Team } from '../../db/schema/index.js';
 import type {
   CreateTeamInput,
@@ -11,9 +10,8 @@ import type {
 
 const sortColumns = { createdAt: teams.createdAt, name: teams.name };
 
-@Injectable()
 export class TeamsRepository {
-  constructor(@Inject(DB) private readonly db: Database) {}
+  constructor(private readonly db: Database) {}
 
   async insert(input: CreateTeamInput): Promise<Team> {
     const [team] = await this.db.insert(teams).values(input).returning();
